@@ -1,0 +1,6 @@
+storage_class = "standard"
+
+postgres_password = "postgres"
+minio_password    = "minioadmin"
+jenkins_password  = "admin"
+grafana_password  = "admin"
