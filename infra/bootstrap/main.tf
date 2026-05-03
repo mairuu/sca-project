@@ -97,6 +97,7 @@ resource "helm_release" "jenkins" {
     { name = "controller.installPlugins[3]",   value = "configuration-as-code" },
     { name = "controller.installPlugins[4]",   value = "ssh-credentials" },
     { name = "controller.installPlugins[5]",   value = "ssh-slaves" },
-    { name = "controller.installPlugins[6]",   value = "ws-cleanup" }
+    { name = "controller.installPlugins[6]",   value = "ws-cleanup" },
+    { name = "controller.installPlugins[7]",   value = "pipeline-graph-view" }
   ]
 }
