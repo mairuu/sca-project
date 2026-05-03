@@ -20,7 +20,12 @@ pipeline {
         stage('Checkout') {
             steps {
                 cleanWs()
+
                 checkout scm
+
+                // // or use checkout scm
+                // git url: "https://github.com/mairuu/sca-project.git", branch: "main" 
+
                 sh 'git submodule update --init --recursive --depth 1'
             }
         }
