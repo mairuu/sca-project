@@ -82,6 +82,7 @@ resource "helm_release" "jenkins" {
   namespace  = kubernetes_namespace_v1.devops.metadata[0].name
 
   set = [
+    { name = "controller.initializeOnce",      value = "true" },
     { name = "controller.admin.username",      value = "admin" },
     { name = "controller.admin.password",      value = var.jenkins_password },
     { name = "persistence.size",               value = "2Gi" },
