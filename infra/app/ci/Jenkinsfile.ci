@@ -10,10 +10,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_HUB_USER = 'rhicien'
-        FRONTEND_IMAGE  = "${DOCKER_HUB_USER}/sca-frontend"
-        BACKEND_IMAGE   = "${DOCKER_HUB_USER}/sca-backend"
-        IMAGE_TAG       = "${params.IMAGE_TAG}"
+        IMAGE_TAG = "${params.IMAGE_TAG}"
     }
 
     stages {
@@ -31,15 +28,27 @@ pipeline {
         }
 
         stage('Build') {
-            parallel {
-                stage('Frontend') {
-                    steps {
-                        sh "docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} ./frontend"
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_HUB_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    script {
+                        env.FRONTEND_IMAGE = "${DOCKER_HUB_USER}/sca-frontend"
+                        env.BACKEND_IMAGE = "${DOCKER_HUB_USER}/sca-backend"
                     }
-                }
-                stage('Backend') {
-                    steps {
-                        sh "docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} ./backend"
+                    parallel {
+                        stage('Frontend') {
+                            steps {
+                                sh "docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} ./frontend"
+                            }
+                        }
+                        stage('Backend') {
+                            steps {
+                                sh "docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} ./backend"
+                            }
+                        }
                     }
                 }
             }
@@ -52,6 +61,10 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
+                    script {
+                        env.FRONTEND_IMAGE = "${DOCKER_USER}/sca-frontend"
+                        env.BACKEND_IMAGE = "${DOCKER_USER}/sca-backend"
+                    }
                     sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
 
@@ -71,11 +84,21 @@ pipeline {
 
     post {
         always {
-            sh '''
-                docker rmi ${FRONTEND_IMAGE}:${IMAGE_TAG} ${FRONTEND_IMAGE}:latest || true
-                docker rmi ${BACKEND_IMAGE}:${IMAGE_TAG}  ${BACKEND_IMAGE}:latest  || true
-                docker logout || true
-            '''
+            withCredentials([usernamePassword(
+                credentialsId: 'dockerhub-creds',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS'
+            )]) {
+                script {
+                    env.FRONTEND_IMAGE = "${DOCKER_USER}/sca-frontend"
+                    env.BACKEND_IMAGE = "${DOCKER_USER}/sca-backend"
+                }
+                sh '''
+                    docker rmi ${FRONTEND_IMAGE}:${IMAGE_TAG} ${FRONTEND_IMAGE}:latest || true
+                    docker rmi ${BACKEND_IMAGE}:${IMAGE_TAG}  ${BACKEND_IMAGE}:latest  || true
+                    docker logout || true
+                '''
+            }
             cleanWs()
         }
     }

@@ -110,7 +110,7 @@ resource "kubernetes_deployment_v1" "backend" {
 
           env {
             name  = "DB_DSN"
-            value = "host=my-postgres-postgresql.app.svc.cluster.local user=postgres password=$(SECRET_PG_PASS) dbname=app_db port=5432 sslmode=disable"
+            value = "host=my-postgres-postgresql.app.svc.cluster.local user=${var.postgres_username} password=$(SECRET_PG_PASS) dbname=app_db port=5432 sslmode=disable"
           }
         }
 
@@ -174,12 +174,12 @@ resource "kubernetes_deployment_v1" "backend" {
 
           env {
             name  = "DB_DSN"
-            value = "host=my-postgres-postgresql.app.svc.cluster.local user=postgres password=$(SECRET_PG_PASS) dbname=app_db port=5432 sslmode=disable"
+            value = "host=my-postgres-postgresql.app.svc.cluster.local user=${var.postgres_username} password=$(SECRET_PG_PASS) dbname=app_db port=5432 sslmode=disable"
           }
 
           env {
             name  = "PUBLIC_MINIO_ACCESS_KEY_ID"
-            value = "minioadmin"
+            value = var.minio_root_user
           }
           env {
             name  = "PUBLIC_MINIO_SECRET_ACCESS_KEY"
@@ -187,7 +187,7 @@ resource "kubernetes_deployment_v1" "backend" {
           }
           env {
             name  = "TEMPORARY_MINIO_ACCESS_KEY_ID"
-            value = "minioadmin"
+            value = var.minio_root_user
           }
           env {
             name  = "TEMPORARY_MINIO_SECRET_ACCESS_KEY"

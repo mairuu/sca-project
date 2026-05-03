@@ -1,6 +1,25 @@
 storage_class = "standard"
 
 postgres_password = "postgres"
-minio_password    = "minioadmin"
-jenkins_password  = "admin"
-grafana_password  = "admin"
+postgres_username = "postgres"
+
+minio_password  = "minioadmin"
+minio_root_user = "minioadmin"
+
+jwt_secret = "changeme"
+
+jenkins_password = "admin"
+grafana_password = "admin"
+
+dockerhub_username = "your-dockerhub-username"
+dockerhub_password = "changeme"
+
+builder_host      = "192.168.39.1"
+builder_username  = "jenkins"
+builder_remote_fs = "/home/jenkins/jenkins-agent"
+
+builder_ssh_private_key = <<-EOT
+-----BEGIN OPENSSH PRIVATE KEY-----
+<paste your private key here>
+-----END OPENSSH PRIVATE KEY-----
+EOT

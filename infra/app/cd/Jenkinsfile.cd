@@ -12,6 +12,9 @@ pipeline {
     environment {
         TF_DIR    = "${WORKSPACE}/infra/app/terraform"
         IMAGE_TAG = "${params.IMAGE_TAG}"
+        APP_NAMESPACE = "app"
+        BACKEND_DEPLOYMENT = "backend"
+        FRONTEND_DEPLOYMENT = "frontend"
     }
 
     stages {
@@ -33,17 +36,23 @@ pipeline {
         stage('Inject Secrets & Plan') {
             steps {
                 withCredentials([
+                    usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
                     string(credentialsId: 'MINIO_PASSWORD',   variable: 'MINIO_PASS'),
                     string(credentialsId: 'POSTGRES_PASSWORD', variable: 'PG_PASS'),
-                    string(credentialsId: 'JWT_SECRET',        variable: 'JWT_PASS')
+                    string(credentialsId: 'POSTGRES_USERNAME', variable: 'PG_USER'),
+                    string(credentialsId: 'JWT_SECRET',        variable: 'JWT_PASS'),
+                    string(credentialsId: 'MINIO_ROOT_USER', variable: 'MINIO_USER')
                 ]) {
                     sh '''
                         cd ${TF_DIR}
 
                         terraform plan \
+                          -var="docker_hub_user=${DOCKER_USER}" \
                           -var="image_tag=${IMAGE_TAG}" \
                           -var="postgres_password=${PG_PASS}" \
+                          -var="postgres_username=${PG_USER}" \
                           -var="minio_password=${MINIO_PASS}" \
+                          -var="minio_root_user=${MINIO_USER}" \
                           -var="jwt_secret=${JWT_PASS}" \
                           -out=tfplan
                     '''
@@ -63,8 +72,8 @@ pipeline {
         stage('Verify Rollout') {
             steps {
                 sh '''
-                    kubectl rollout status deployment/backend  -n app --timeout=120s
-                    kubectl rollout status deployment/frontend -n app --timeout=120s
+                    kubectl rollout status deployment/${BACKEND_DEPLOYMENT}  -n ${APP_NAMESPACE} --timeout=120s
+                    kubectl rollout status deployment/${FRONTEND_DEPLOYMENT} -n ${APP_NAMESPACE} --timeout=120s
                 '''
             }
         }
@@ -79,8 +88,8 @@ pipeline {
         failure {
             sh '''
                 echo "=== Deployment failed. Rolling back... ==="
-                kubectl rollout undo deployment/backend  -n app || true
-                kubectl rollout undo deployment/frontend -n app || true
+                kubectl rollout undo deployment/${BACKEND_DEPLOYMENT}  -n ${APP_NAMESPACE} || true
+                kubectl rollout undo deployment/${FRONTEND_DEPLOYMENT} -n ${APP_NAMESPACE} || true
             '''
         }
     }

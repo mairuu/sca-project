@@ -130,48 +130,45 @@ Domains
 
 ---
 
+### Credential Flow
+
+Credentials flow through the system as follows:
+
+1. **Bootstrap** → Terraform reads `terraform.tfvars` and seeds Jenkins via JCasC with all credentials
+2. **Jenkins** → CI/CD pipelines pull credentials from Jenkins Credentials Store
+3. **CD Pipeline** → Injects credentials as Terraform variables to `terraform plan/apply`
+4. **Kubernetes** → Terraform creates ConfigMaps and Secrets with the injected values
+
+---
+
 ### Configure CI/CD (Jenkins)
 
-1. Add a builder node:
+Jenkins is automatically configured during bootstrap using JCasC (Jenkins Configuration as Code). All credentials and jobs are seeded from `infra/bootstrap/main.tf`.
 
+#### Prerequisites:
+
+1. Add a builder node to your cluster:
    * Must have Docker and `kubectl` installed
    * Label it as: `builder`
    > You can use the cluster host as the builder node for simplicity
 
-2. Create credentials:
+2. Verify credentials are automatically seeded:
+   Go to Jenkins dashboard > Credentials > System > Global credentials and confirm:
+   * `dockerhub-creds` - DockerHub username and password
+   * `MINIO_PASSWORD` - MinIO password
+   * `POSTGRES_PASSWORD` - PostgreSQL password
+   * `JWT_SECRET` - JWT signing secret
+   * `POSTGRES_USERNAME` - PostgreSQL username
+   * `POSTGRES_DB_NAME` - PostgreSQL database name
+   * `POSTGRES_PORT` - PostgreSQL port
+   * `MINIO_ROOT_USER` - MinIO root username
+   * `builder-ssh-key` - SSH key for builder agent
 
-   Go to Jenkins dashboard > Credentials > System > Global credentials and add the following (same as those in Terraform bootstrap variables):
+3. Verify pipeline jobs are automatically created:
+   Go to Jenkins dashboard and confirm the following jobs exist:
+   * `build-and-push` - CI pipeline (builds and pushes Docker images)
+   * `pull-and-deploy` - CD pipeline (deploys to Kubernetes)
 
-   2.1. For DockerHub:
-      * Type: Username and password
-      * ID: `dockerhub-creds`
-
-   2.2. MinIO credentials:
-      * Type: Secret text
-      * ID: `MINIO_PASSWORD`
-
-   2.3.PostgreSQL credentials: 
-      * Type: Secret text
-      * ID: `POSTGRES_PASSWORD`
-
-   2.4. JWT secret:
-      * Type: Secret text
-      * ID: `JWT_SECRET`
-
-3. Create a pipeline job:
-
-   * Use "Pipeline from SCM"
-   * Point to this repository
-   * Jenkinsfile path:
-
-     ```
-     infra/app/ci/Jenkinsfile.ci
-     ```
-   * repeat for deployment pipeline with Jenkinsfile path:
-
-     ```
-     infra/app/cd/Jenkinsfile.cd
-     ```
 ---
 
 ### Building Application
@@ -194,4 +191,5 @@ Building is handled via the Jenkins pipeline:
 > you can also trigger the CD pipeline manually after the build completes
 
 Domains
+- app.local     # frontend
 - api.app.local # backend

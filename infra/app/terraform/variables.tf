@@ -13,9 +13,21 @@ variable "postgres_password" {
   sensitive = true
 }
 
+variable "postgres_username" {
+  type        = string
+  description = "PostgreSQL username"
+  default     = "postgres"
+}
+
 variable "minio_password" {
   type      = string
   sensitive = true
+}
+
+variable "minio_root_user" {
+  type        = string
+  description = "MinIO root username"
+  default     = "minioadmin"
 }
 
 variable "jwt_secret" {
