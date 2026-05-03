@@ -1,0 +1,84 @@
+pipeline {
+    agent { label "host-agent" }
+
+    parameters {
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: '1.0.0',
+            description: 'Image tag to deploy (must already exist in Docker Hub)'
+        )
+    }
+
+    environment {
+        TF_DIR    = "${WORKSPACE}/infra/app/terraform"
+        IMAGE_TAG = "${params.IMAGE_TAG}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+
+                // // or use checkout scm
+                // git url: "https://github.com/mairuu/sca-project.git", branch: "main" 
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                sh 'cd ${TF_DIR} && terraform init'
+            }
+        }
+
+        stage('Inject Secrets & Plan') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'MINIO_PASSWORD',   variable: 'MINIO_PASS'),
+                    string(credentialsId: 'POSTGRES_PASSWORD', variable: 'PG_PASS'),
+                    string(credentialsId: 'JWT_SECRET',        variable: 'JWT_PASS')
+                ]) {
+                    sh '''
+                        cd ${TF_DIR}
+
+                        terraform plan \
+                          -var="image_tag=${IMAGE_TAG}" \
+                          -var="postgres_password=${PG_PASS}" \
+                          -var="minio_password=${MINIO_PASS}" \
+                          -var="jwt_secret=${JWT_PASS}" \
+                          -out=tfplan
+                    '''
+                }
+            }
+        }
+
+        stage('Apply') {
+            steps {
+                sh '''
+                    cd ${TF_DIR}
+                    terraform apply -auto-approve tfplan
+                '''
+            }
+        }
+
+        stage('Verify Rollout') {
+            steps {
+                sh '''
+                    kubectl rollout status deployment/backend  -n app --timeout=120s
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'rm -f ${TF_DIR}/tfplan || true'
+        }
+
+        failure {
+            sh '''
+                echo "=== Deployment failed. Rolling back... ==="
+                kubectl rollout undo deployment/backend  -n app || true
+            '''
+        }
+    }
+}

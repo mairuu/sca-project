@@ -15,11 +15,11 @@
 Install dependencies for both frontend and backend:
 
 ```bash
-# Frontend
+# frontend
 cd frontend
 npm install
 
-# Backend
+# backend
 cd backend
 go mod tidy
 ```
@@ -31,22 +31,22 @@ go mod tidy
 Start all required services and applications:
 
 ```bash
-# Frontend
+# frontend
 cd frontend
 npm run dev -- --host
 ```
 
 ```bash
-# Backend
+# backend
 cd backend
 
-# Start dependency services (e.g. database, MinIO)
+# start dependency services (e.g. database, MinIO)
 docker compose up -d  # ⚠️ Development only
 
-# Run database migrations
+# run database migrations
 go run ./cmd/migrate
 
-# Start backend server
+# start backend server
 go run ./cmd/api
 ```
 
@@ -67,10 +67,10 @@ Provision base infrastructure using Terraform:
 ```bash
 cd infra/bootstrap
 
-# Copy and configure variables
+# copy and configure variables
 cp terraform.tfvars.example terraform.tfvars
 
-# Initialize and apply Terraform
+# initialize and apply terraform
 terraform init
 terraform apply
 ```
@@ -87,17 +87,17 @@ Option 1: /etc/hosts (Quick Setup)
 
 Add entries manually:
 ```
+# /etc/hosts
 {CLUSTER_IP} jenkins.devtool.local
 {CLUSTER_IP} grafana.devtool.local
 {CLUSTER_IP} cdn.app.local
 {CLUSTER_IP} cdn-console.app.local
 ```
 
-
 Option 2: NetworkManager + dnsmasq (Linux)
 ```bash
 # get minikube ip
-MINIKUBE_IP=$(minikube ip)
+MINIKUBE_IP=$(minikube ip) # or your cluster's IP address
 
 # configure dnsmasq for local domains
 sudo mkdir -p /etc/NetworkManager/dnsmasq.d/
@@ -140,8 +140,23 @@ Domains
 
 2. Create credentials:
 
-   * Type: Docker registry (e.g. Docker Hub)
-   * ID: `dockerhub-creds`
+   Go to Jenkins dashboard > Credentials > System > Global credentials and add the following (same as those in Terraform bootstrap variables):
+
+   2.1. For DockerHub:
+      * Type: Username and password
+      * ID: `dockerhub-creds`
+
+   2.2. MinIO credentials:
+      * Type: Secret text
+      * ID: `MINIO_PASSWORD`
+
+   2.3.PostgreSQL credentials: 
+      * Type: Secret text
+      * ID: `POSTGRES_PASSWORD`
+
+   2.4. JWT secret:
+      * Type: Secret text
+      * ID: `JWT_SECRET`
 
 3. Create a pipeline job:
 
@@ -150,16 +165,33 @@ Domains
    * Jenkinsfile path:
 
      ```
-     infra/app/ci/Jenkinsfile
+     infra/app/ci/Jenkinsfile.ci
+     ```
+   * repeat for deployment pipeline with Jenkinsfile path:
+
+     ```
+     infra/app/cd/Jenkinsfile.cd
      ```
 ---
 
-### Deploy Application
+### Building Application
 
-Deployment is handled via the Jenkins pipeline:
+Building is handled via the Jenkins pipeline:
 
 1. Go to the Jenkins dashboard
-2. Open the pipeline job
+2. Open the CI pipeline job
 3. Click **"Build with Parameters"**
 4. Enter an image tag (e.g. `1.0.0`)
 5. Click **Build**
+> you can trigger the CI pipeline with hook or manually after code changes
+
+### Deploy Application
+
+1. After the build pipeline completes successfully, open the CD pipeline job
+2. Click **"Build with Parameters"**
+3. Enter the same image tag used in the build step
+4. Click **Build**
+> you can also trigger the CD pipeline manually after the build completes
+
+Domains
+- api.app.local # backend
