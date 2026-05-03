@@ -8,7 +8,24 @@ resource "kubernetes_ingress_v1" "app" {
   }
 
   spec {
-    # Backend — api.app.local
+    # frontend — app.local
+    rule {
+      host = "app.local"
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = kubernetes_service_v1.frontend.metadata[0].name
+              port { number = 3000 }
+            }
+          }
+        }
+      }
+    }
+
+    # backend — api.app.local
     rule {
       host = "api.app.local"
       http {

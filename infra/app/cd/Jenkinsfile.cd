@@ -64,6 +64,7 @@ pipeline {
             steps {
                 sh '''
                     kubectl rollout status deployment/backend  -n app --timeout=120s
+                    kubectl rollout status deployment/frontend -n app --timeout=120s
                 '''
             }
         }
@@ -72,12 +73,14 @@ pipeline {
     post {
         always {
             sh 'rm -f ${TF_DIR}/tfplan || true'
+            cleanWs()
         }
 
         failure {
             sh '''
                 echo "=== Deployment failed. Rolling back... ==="
                 kubectl rollout undo deployment/backend  -n app || true
+                kubectl rollout undo deployment/frontend -n app || true
             '''
         }
     }

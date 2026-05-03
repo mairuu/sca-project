@@ -53,6 +53,18 @@ resource "kubernetes_config_map_v1" "backend_config" {
   }
 }
 
+resource "kubernetes_config_map_v1" "frontend_config" {
+  metadata {
+    name      = "frontend-config"
+    namespace = "app"
+  }
+
+  data = {
+    PUBLIC_API_BASE_URL = "http://api.app.local"
+    PUBLIC_CDN_BASE_URL = "http://cdn.app.local"
+  }
+}
+
 # -------------------------
 # Backend
 # -------------------------
@@ -200,6 +212,79 @@ resource "kubernetes_service_v1" "backend" {
     port {
       port        = 8080
       target_port = 8080
+    }
+  }
+}
+
+# -------------------------
+# Frontend
+# -------------------------
+
+resource "kubernetes_deployment_v1" "frontend" {
+  metadata {
+    name      = "frontend"
+    namespace = "app"
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = { app = "frontend" }
+    }
+
+    template {
+      metadata {
+        labels = { app = "frontend" }
+      }
+
+      spec {
+        container {
+          name  = "frontend"
+          image = local.frontend_image
+
+          port { container_port = 3000 }
+
+          liveness_probe {
+            http_get {
+              path = "/health"
+              port = 3000
+            }
+            initial_delay_seconds = 10
+            period_seconds = 15
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = 3000
+            }
+            initial_delay_seconds = 5
+            period_seconds = 5
+          }
+
+          env_from {
+            config_map_ref { name = kubernetes_config_map_v1.frontend_config.metadata[0].name }
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service_v1" "frontend" {
+  metadata {
+    name      = "frontend-service"
+    namespace = "app"
+  }
+
+  spec {
+    selector = { app = "frontend" }
+    type     = "ClusterIP"
+
+    port {
+      port        = 3000
+      target_port = 3000
     }
   }
 }
