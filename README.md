@@ -95,28 +95,9 @@ Add entries manually:
 ```
 
 Option 2: NetworkManager + dnsmasq (Linux)
-```bash
-# get minikube ip
-MINIKUBE_IP=$(minikube ip) # or your cluster's IP address
 
-# configure dnsmasq for local domains
-sudo mkdir -p /etc/NetworkManager/dnsmasq.d/
+see [configure-dns](scripts/configure-dns.sh) for automated setup
 
-cat <<EOF | sudo tee /etc/NetworkManager/dnsmasq.d/minikube.conf
-server=/local/${MINIKUBE_IP}
-server=/app.local/${MINIKUBE_IP}
-server=/devtool.local/${MINIKUBE_IP}
-EOF
-
-# enable dnsmasq in NetworkManager
-cat <<EOF | sudo tee /etc/NetworkManager/conf.d/dnsmasq.conf
-[main]
-dns=dnsmasq
-EOF
-
-# restart NetworkManager
-sudo systemctl restart NetworkManager
-```
 Verify
 ```
 curl jenkins.devtool.local
