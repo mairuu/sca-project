@@ -1,6 +1,6 @@
 [submodule "frontend"]
 	path = frontend
-	url = https://github.com/mairuu/mp-web
+	url = https://github.com/mairuu/sca-frontend
 [submodule "backend"]
 	path = backend
-	url = https://github.com/mairuu/mp-api
+	url = https://github.com/mairuu/sca-backend
