@@ -124,28 +124,27 @@ Credentials flow through the system as follows:
 
 ### Configure CI/CD (Jenkins)
 
-Jenkins is automatically configured during bootstrap using JCasC (Jenkins Configuration as Code). All credentials and jobs are seeded from `infra/bootstrap/main.tf`.
+Jenkins is automatically configured during bootstrap using JCasC (Jenkins Configuration as Code). All nodes credentials and jobs are seeded from `infra/bootstrap/main.tf`.
 
-#### Prerequisites:
+#### Verification:
 
-1. Add a builder node to your cluster:
-   * Must have Docker and `kubectl` installed
-   * Label it as: `builder`
-   > You can use the cluster host as the builder node for simplicity
+1. Verify a builder agent node is automatically created:
+
+   Go to Jenkins dashboard > Manage Jenkins > Manage Nodes and confirm a node named `builder` exists with the correct SSH credentials.
 
 2. Verify credentials are automatically seeded:
+
    Go to Jenkins dashboard > Credentials > System > Global credentials and confirm:
    * `dockerhub-creds` - DockerHub username and password
+   * `builder-ssh-key` - SSH key for builder agent
    * `MINIO_PASSWORD` - MinIO password
    * `POSTGRES_PASSWORD` - PostgreSQL password
    * `JWT_SECRET` - JWT signing secret
    * `POSTGRES_USERNAME` - PostgreSQL username
-   * `POSTGRES_DB_NAME` - PostgreSQL database name
-   * `POSTGRES_PORT` - PostgreSQL port
    * `MINIO_ROOT_USER` - MinIO root username
-   * `builder-ssh-key` - SSH key for builder agent
 
 3. Verify pipeline jobs are automatically created:
+
    Go to Jenkins dashboard and confirm the following jobs exist:
    * `build-and-push` - CI pipeline (builds and pushes Docker images)
    * `pull-and-deploy` - CD pipeline (deploys to Kubernetes)
@@ -174,3 +173,21 @@ Building is handled via the Jenkins pipeline:
 Domains
 - app.local     # frontend
 - api.app.local # backend
+
+
+### Accessing the Application
+
+After deployment, access the application at:
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://app.local |
+| Backend API | http://api.app.local |
+| CDN | http://cdn.app.local |
+| CDN Console | http://cdn-console.app.local |
+| Jenkins | http://jenkins.devtool.local |
+| Grafana | http://grafana.devtool.local |
+
+
+### Monitoring and Logging
+TODO: integrate monitoring and logging tools (e.g. Grafana, Prometheus)
