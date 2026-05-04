@@ -4,6 +4,7 @@ resource "kubernetes_ingress_v1" "app" {
     namespace = "app"
     annotations = {
       "kubernetes.io/ingress.class" = "nginx"
+      "nginx.ingress.kubernetes.io/proxy-body-size" = "8m"
     }
   }
 
