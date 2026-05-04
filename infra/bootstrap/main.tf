@@ -182,8 +182,8 @@ locals {
                   username: "${var.builder_username}"
                   privateKeySource:
                     directEntry:
-                      # fixme: this is not working right now.
-                      privateKey: "${var.builder_ssh_private_key}"
+                      privateKey: |
+                        ${indent(24, var.builder_ssh_private_key)}
                   scope: GLOBAL
 
               - string:
