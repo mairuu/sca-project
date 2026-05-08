@@ -1,12 +1,50 @@
 # Comic Reader — ENG23 3074
 
-แพทฟอร์มสำหรับอ่านการ์ตูนออนไลน์ พัฒนาด้วย SvelteKit Golang; containerzed ด้วย Docker และ deployed บน Kubernetes ผ่าน CI/CD pipeline บน Jenkins
+> แพทฟอร์มสำหรับอ่านการ์ตูนออนไลน์ พัฒนาด้วย SvelteKit Golang; containerzed ด้วย Docker และ deployed บน Kubernetes ผ่าน CI/CD pipeline บน Jenkins
+---
 
+## สมาชิกในกลุ่ม
+
+| รหัสนักศึกษา | ชื่อ-นามสกุล | ความรับผิดชอบ |
+|-------------|-------------|---------------|
+| B6603946 | นายสุรเกียรติ์ สิงขรอาสน์ | Git, App Development, Jenkins, Docker, Terraform |
+| B6618643 | นายกิตตินันท์ ปัจจัยโคถา | Prometheus, Grafana (Frontend)|
+| B6627713 | นายทองนรินทร์ แย้มศรี | Prometheus, Grafana (Backend)|
+
+---
 ## ภาพรวมระบบ
 - **ชื่อ:** Comic Reader
 - **ประเภท:** Web Application
 - **ภาษา / Framework:** SvelteKit, Golang
-- **คำอธิบาย:** แพทฟอร์มสำหรับอ่านการ์ตูนออนไลน์ ช่วยให้ผู้ใช้สามารถเข้าถึงและอ่านการ์ตูนได้อย่างสะดวกและรวดเร็ว มีฟีเจอร์ประวัติการอ่านและแนะบุคมาร์คการ์ตูนที่ชื่นชอบ
+- **คำอธิบาย:** แพทฟอร์มสำหรับอ่านการ์ตูนออนไลน์ ช่วยให้ผู้ใช้สามารถเข้าถึงและอ่านการ์ตูนได้อย่างสะดวกและรวดเร็ว มีฟีเจอร์ประวัติการอ่านและบุคมาร์คการ์ตูนที่ชื่นชอบ
+
+---
+## โครงสร้าง Repository
+
+```
+[sca-project]/
+├── backend/
+│   ├── cmd/                    # Entry point ของแอปพลิเคชัน (เช่น api, migrate)
+│   ├── internal/               # โค้ดการทำงานหลักของระบบแบ่งตาม components
+│   ├── Dockerfile              # คำสั่งสร้าง Docker image สำหรับ backend
+│   ├── compose.yml             # สำหรับรัน Dependency services (DB, MinIO)
+│   └── go.mod                  # จัดการ Go dependencies
+├── frontend/
+│   ├── src/                    # โค้ดหลักของแอปพลิเคชันส่วนหน้า (SvelteKit)
+│   ├── static/                 # ไฟล์ที่ไม่มีการเปลี่ยนแปลง (เช่น รูปภาพ)
+│   ├── Dockerfile              # คำสั่งสร้าง Docker image สำหรับ frontend
+│   └── package.json            # Node.js dependencies
+├── infra/
+│   ├── app/
+│   │   ├── cd/                 # Jenkinsfile สำหรับ CD pipeline (Deploy)
+│   │   ├── ci/                 # Jenkinsfile สำหรับ CI pipeline (Build & Push)
+│   │   └── terraform/          # กำหนด resource ที่จะ provision สำหรับตัวแอป
+│   └── bootstrap/              # กำหนด Infrastructure ระดับฐานด้วย Terraform
+├── scripts/
+│   └── configure-dns.sh        # สคริปต์อัตโนมัติสำหรับตั้งค่า DNS
+├── refs.md                     # แหล่งอ้างอิง
+└── README.md                   # เอกสารอธิบายโปรเจคนี้
+```
 
 ## Development
 
