@@ -1,0 +1,87 @@
+{
+  "title": "Frontend App Dashboard",
+  "uid": "frontend-app",
+  "tags": ["frontend", "nodejs", "sveltekit"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "panels": [
+    {
+      "title": "Total Requests by Route",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(http_requests_total) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "title": "95th Percentile Response Time (Seconds)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95 Latency"
+        }
+      ],
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 5 }
+    },
+    {
+      "title": "Request Rate (per second)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[5m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 5 }
+    },
+    {
+      "title": "CPU Usage (%)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total[5m]) * 100",
+          "legendFormat": "CPU %"
+        }
+      ],
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 12 }
+    },
+    {
+      "title": "Memory Usage (MB)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "nodejs_heap_size_used_bytes / 1024 / 1024",
+          "legendFormat": "Heap Used MB"
+        }
+      ],
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 12 }
+    },
+    {
+      "title": "Event Loop Lag (Seconds)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "nodejs_eventloop_lag_seconds",
+          "legendFormat": "Lag"
+        }
+      ],
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 12 }
+    }
+  ]
+}
