@@ -1,0 +1,98 @@
+{
+  "title": "Backend Services Monitoring",
+  "timezone": "browser",
+  "refresh": "10s",
+  "schemaVersion": 36,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Logins",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(app_logins_total)",
+          "refId": "A"
+        }
+      ],
+      "options": { "colorMode": "value", "graphMode": "none" }
+    },
+    {
+      "type": "stat",
+      "title": "New Registrations",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(app_registrations_total)",
+          "refId": "A"
+        }
+      ],
+      "options": { "colorMode": "value", "graphMode": "none" }
+    },
+    {
+      "type": "stat",
+      "title": "Mangas Uploaded",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(app_mangas_uploaded_total)",
+          "refId": "A"
+        }
+      ],
+      "options": { "colorMode": "value", "graphMode": "none" }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP 5xx Error Rate",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "expr": "sum(rate(gin_request_duration_seconds_count{code=~\"5..\"}[5m])) / sum(rate(gin_request_duration_seconds_count[5m])) * 100",
+          "legendFormat": "Error Rate (%)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Bandwidth (Request/Response Size)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "expr": "sum(rate(gin_request_size_bytes_sum[5m]))",
+          "legendFormat": "Request Size/s"
+        },
+        {
+          "expr": "sum(rate(gin_response_size_bytes_sum[5m]))",
+          "legendFormat": "Response Size/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "Bps" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "GC Frequency (Pauses per second)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "targets": [
+        {
+          "expr": "sum(rate(go_gc_duration_seconds_count[1m]))",
+          "legendFormat": "GC Pauses / sec"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Traffic (RPS)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "targets": [
+        {
+          "expr": "sum(rate(gin_request_duration_seconds_count[1m]))",
+          "legendFormat": "Total Requests / sec"
+        }
+      ]
+    }
+  ]
+}
