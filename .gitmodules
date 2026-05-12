@@ -1,6 +1,7 @@
 [submodule "frontend"]
 	path = frontend
 	url = https://github.com/mairuu/sca-frontend
+	branch = main
 [submodule "backend"]
 	path = backend
 	url = https://github.com/mairuu/sca-backend
