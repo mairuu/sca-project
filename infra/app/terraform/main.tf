@@ -276,6 +276,7 @@ resource "kubernetes_service_v1" "frontend" {
   metadata {
     name      = "frontend-service"
     namespace = "app"
+    labels    = { app = "frontend" }
   }
 
   spec {
@@ -283,8 +284,36 @@ resource "kubernetes_service_v1" "frontend" {
     type     = "ClusterIP"
 
     port {
+      name        = "http"
       port        = 3000
       target_port = 3000
+    }
+  }
+}
+
+resource "kubernetes_manifest" "frontend_servicemonitor" {
+  manifest = {
+    apiVersion = "monitoring.coreos.com/v1"
+    kind       = "ServiceMonitor"
+    metadata = {
+      name      = "frontend-servicemonitor"
+      namespace = "app"
+      labels = {
+        release = "monitoring"
+      }
+    }
+    spec = {
+      selector = {
+        matchLabels = {
+          app = "frontend"
+        }
+      }
+      endpoints = [
+        {
+          port = "http"
+          path = "/metrics"
+        }
+      ]
     }
   }
 }
