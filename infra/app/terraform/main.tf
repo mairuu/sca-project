@@ -317,3 +317,17 @@ resource "kubernetes_manifest" "frontend_servicemonitor" {
     }
   }
 }
+
+resource "kubernetes_config_map" "frontend_dashboard" {
+  metadata {
+    name      = "frontend-dashboard-config"
+    namespace = "devops"
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+
+  data = {
+    "frontend-dashboard.json" = file("${path.module}/frontend-dashboard.json")
+  }
+}
