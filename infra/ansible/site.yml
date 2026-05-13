@@ -1,0 +1,17 @@
+---
+# site.yml — Main Ansible Playbook
+# Configures the Jenkins builder node with all required tools:
+#   - common   : system packages
+#   - docker   : Docker Engine + user group
+#   - kubectl  : Kubernetes CLI
+#   - terraform: Terraform binary
+
+- name: Configure Jenkins Builder Node
+  hosts: builder_nodes
+  become: true
+
+  roles:
+    - common
+    - docker
+    - kubectl
+    - terraform

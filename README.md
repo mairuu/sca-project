@@ -19,6 +19,49 @@
 - **คำอธิบาย:** แพทฟอร์มสำหรับอ่านการ์ตูนออนไลน์ ช่วยให้ผู้ใช้สามารถเข้าถึงและอ่านการ์ตูนได้อย่างสะดวกและรวดเร็ว มีฟีเจอร์ประวัติการอ่านและบุคมาร์คการ์ตูนที่ชื่นชอบ
 
 ---
+## Architecture Diagram
+
+```
+Developer
+    |
+    ▼  git push
+GitHub ── webhook ──▶ Jenkins CI/CD
+                           |
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+           Checkout      Build       Docker Build
+                      (parallel)         |
+                    Frontend+Backend     ▼
+                                    Docker Hub
+                                         |
+                           ┌─────────────┤
+                           ▼             ▼
+                       Terraform      Ansible
+                     (K8s resources) (Builder setup)
+                           │             │
+                           └──────┬──────┘
+                                  ▼
+                        Kubernetes Cluster
+                   ┌────────────────────────┐
+                   │  Frontend   Backend    │
+                   │   [Pod]      [Pod]     │
+                   │  SvelteKit  Golang/Gin │
+                   │                       │
+                   │  PostgreSQL   MinIO    │
+                   │   [Pod]       [Pod]    │
+                   │                       │
+                   │  Nginx Ingress         │
+                   │  app.local             │
+                   │  api.app.local         │
+                   └────────────────────────┘
+                           │          │
+              ┌────────────┘          └────────────┐
+              ▼                                    ▼
+        Prometheus                             Grafana
+      (scrape /metrics)  ─────────────▶    (dashboard)
+```
+
+---
 ## โครงสร้าง Repository
 
 ```
@@ -35,6 +78,15 @@
 │   ├── Dockerfile              # คำสั่งสร้าง Docker image สำหรับ frontend
 │   └── package.json            # Node.js dependencies
 ├── infra/
+│   ├── ansible/                # Ansible playbook สำหรับตั้งค่า Builder Node อัตโนมัติ
+│   │   ├── site.yml            # Main playbook
+│   │   ├── ansible.cfg         # Ansible config
+│   │   ├── inventory.ini       # Inventory template (overwritten at runtime)
+│   │   └── roles/
+│   │       ├── common/         # ติดตั้ง packages พื้นฐาน
+│   │       ├── docker/         # ติดตั้ง Docker Engine
+│   │       ├── kubectl/        # ติดตั้ง kubectl
+│   │       └── terraform/      # ติดตั้ง Terraform
 │   ├── app/
 │   │   ├── cd/                 # Jenkinsfile สำหรับ CD pipeline (Deploy)
 │   │   ├── ci/                 # Jenkinsfile สำหรับ CI pipeline (Build & Push)
@@ -228,4 +280,54 @@ After deployment, access the application at:
 
 
 ### Monitoring and Logging
-TODO: integrate monitoring and logging tools (e.g. Grafana, Prometheus)
+
+Monitoring is powered by **Prometheus** + **Grafana** deployed via `kube-prometheus-stack` (Helm) in the `devops` namespace.
+
+#### Metrics Collection
+
+The **frontend** exposes a `/metrics` endpoint (Prometheus format) via `prom-client`:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `http_requests_total` | Counter | Total HTTP requests (labels: method, route, status) |
+| `http_request_duration_seconds` | Histogram | Request latency in seconds |
+| `nodejs_heap_size_used_bytes` | Gauge | Node.js heap memory usage |
+| `process_cpu_seconds_total` | Counter | CPU usage |
+| `nodejs_eventloop_lag_seconds` | Gauge | Event loop lag |
+
+The **backend** (Golang/Gin) exposes metrics via `gin-contrib/prom`:
+
+| Metric | Description |
+|--------|-------------|
+| `gin_request_duration_seconds` | HTTP request duration |
+| `gin_request_size_bytes` | Request body size |
+| `gin_response_size_bytes` | Response body size |
+| `app_logins_total` | Total user logins |
+| `app_registrations_total` | Total user registrations |
+| `app_mangas_uploaded_total` | Total manga uploads |
+| `go_gc_duration_seconds` | Go GC pause duration |
+
+#### How Prometheus Scrapes Metrics
+
+Prometheus discovers targets via **ServiceMonitor** (created by Terraform):
+
+```
+Frontend Pod (:3000/metrics)
+    ↑  scrape every ~15s
+ServiceMonitor (label: release=monitoring)
+    ↑  discovered by
+Prometheus (kube-prometheus-stack, namespace: devops)
+    ↓  query
+Grafana Dashboards
+```
+
+#### Grafana Dashboards
+
+Dashboards are loaded **automatically** via ConfigMap (label: `grafana_dashboard: "1"`):
+
+| Dashboard | Panels | File |
+|-----------|--------|------|
+| Frontend App Dashboard | 6 panels (Requests, Latency P95, RPS, CPU, Memory, Event Loop) | `infra/app/terraform/frontend-dashboard.json` |
+| Backend Services Monitoring | 7 panels (Logins, Registrations, Uploads, Error Rate, Bandwidth, GC, RPS) | `infra/app/terraform/backend-dashboard.json` |
+
+Access Grafana at: **http://grafana.devtool.local** (admin / ค่าจาก `grafana_password` ใน tfvars)

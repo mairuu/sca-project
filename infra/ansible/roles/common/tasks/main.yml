@@ -1,0 +1,22 @@
+---
+# roles/common/tasks/main.yml
+# Installs basic system packages required by all other roles
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install common system packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - unzip
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - apt-transport-https
+      - software-properties-common
+    state: present
