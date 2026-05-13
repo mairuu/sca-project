@@ -203,6 +203,7 @@ resource "kubernetes_service_v1" "backend" {
   metadata {
     name      = "backend-service"
     namespace = "app"
+    labels    = { app = "backend" }
   }
 
   spec {
@@ -210,8 +211,36 @@ resource "kubernetes_service_v1" "backend" {
     type     = "ClusterIP"
 
     port {
+      name        = "http"
       port        = 8080
       target_port = 8080
+    }
+  }
+}
+
+resource "kubernetes_manifest" "backend_servicemonitor" {
+  manifest = {
+    apiVersion = "monitoring.coreos.com/v1"
+    kind       = "ServiceMonitor"
+    metadata = {
+      name      = "backend-servicemonitor"
+      namespace = "app"
+      labels = {
+        release = "monitoring"
+      }
+    }
+    spec = {
+      selector = {
+        matchLabels = {
+          app = "backend"
+        }
+      }
+      endpoints = [
+        {
+          port = "http"
+          path = "/metrics"
+        }
+      ]
     }
   }
 }
@@ -329,5 +358,19 @@ resource "kubernetes_config_map" "frontend_dashboard" {
 
   data = {
     "frontend-dashboard.json" = file("${path.module}/frontend-dashboard.json")
+  }
+}
+
+resource "kubernetes_config_map" "backend_dashboard" {
+  metadata {
+    name      = "backend-dashboard-config"
+    namespace = "devops"
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+
+  data = {
+    "backend-dashboard.json" = file("${path.module}/backend-dashboard.json")
   }
 }
