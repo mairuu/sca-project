@@ -10,8 +10,9 @@ pipeline {
     }
 
     environment {
-        TF_DIR    = "${WORKSPACE}/infra/app/terraform"
-        IMAGE_TAG = "${params.IMAGE_TAG}"
+        TF_DIR       = "${WORKSPACE}/infra/app/terraform"
+        ANSIBLE_DIR  = "${WORKSPACE}/infra/ansible"
+        IMAGE_TAG    = "${params.IMAGE_TAG}"
         APP_NAMESPACE = "app"
         BACKEND_DEPLOYMENT = "backend"
         FRONTEND_DEPLOYMENT = "frontend"
@@ -24,6 +25,34 @@ pipeline {
 
                 // // or use checkout scm
                 // git url: "https://github.com/mairuu/sca-project.git", branch: "main" 
+            }
+        }
+
+        stage('Configure Builder (Ansible)') {
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'builder-ssh-key',
+                        keyFileVariable: 'SSH_KEY_FILE',
+                        usernameVariable: 'SSH_USER'
+                    ),
+                    string(credentialsId: 'BUILDER_HOST', variable: 'BUILDER_HOST')
+                ]) {
+                    sh '''
+                        cd ${ANSIBLE_DIR}
+
+                        # Build inventory dynamically from Jenkins credentials (no hardcoded values)
+                        cat > inventory.ini <<EOF
+[builder_nodes]
+builder ansible_host=${BUILDER_HOST} ansible_user=${SSH_USER} ansible_ssh_private_key_file=${SSH_KEY_FILE}
+
+[builder_nodes:vars]
+ansible_python_interpreter=/usr/bin/python3
+EOF
+
+                        ansible-playbook site.yml -i inventory.ini
+                    '''
+                }
             }
         }
 

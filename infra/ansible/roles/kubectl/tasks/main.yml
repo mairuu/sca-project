@@ -1,0 +1,37 @@
+---
+# roles/kubectl/tasks/main.yml
+# Installs kubectl and copies kubeconfig so the builder can reach the cluster
+
+- name: Set kubectl version
+  set_fact:
+    kubectl_version: "v1.30.0"
+
+- name: Check if kubectl already installed with correct version
+  command: kubectl version --client --output=json
+  register: kubectl_check
+  changed_when: false
+  failed_when: false
+
+- name: Download kubectl binary
+  get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+  when: kubectl_check.rc != 0 or kubectl_version not in kubectl_check.stdout
+
+- name: Verify kubectl installation
+  command: kubectl version --client
+  register: kubectl_version_out
+  changed_when: false
+
+- name: Print kubectl version
+  debug:
+    msg: "kubectl installed: {{ kubectl_version_out.stdout }}"
+
+- name: Ensure .kube directory exists for builder user
+  file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0700'

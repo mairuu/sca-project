@@ -216,6 +216,12 @@ locals {
                   secret: "${var.minio_root_user}"
                   scope: GLOBAL
 
+              - string:
+                  id: "BUILDER_HOST"
+                  description: "IP or hostname of the SSH builder node"
+                  secret: "${var.builder_host}"
+                  scope: GLOBAL
+
     jobs:
       - script: |
           pipelineJob('build-and-push') {
