@@ -7,6 +7,11 @@ pipeline {
             defaultValue: '1.0.0',
             description: 'Image tag to deploy (must already exist in Docker Hub)'
         )
+        booleanParam(
+            name: 'RUN_ANSIBLE',
+            defaultValue: true,
+            description: 'Run Ansible to configure the builder node'
+        )
     }
 
     environment {
@@ -22,13 +27,13 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-
-                // // or use checkout scm
-                // git url: "https://github.com/mairuu/sca-project.git", branch: "main" 
             }
         }
 
         stage('Configure Builder (Ansible)') {
+            when {
+                expression { params.RUN_ANSIBLE }
+            }
             steps {
                 withCredentials([
                     sshUserPrivateKey(
