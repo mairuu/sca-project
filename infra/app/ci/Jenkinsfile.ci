@@ -18,10 +18,10 @@ pipeline {
             steps {
                 cleanWs()
 
-                checkout scm
+                // checkout scm
 
                 // // or use checkout scm
-                // git url: "https://github.com/mairuu/sca-project.git", branch: "main" 
+                git url: "https://github.com/mairuu/sca-project.git", branch: "main" 
 
                 sh 'git submodule update --init --recursive --depth 1'
             }
@@ -34,21 +34,18 @@ pipeline {
                     usernameVariable: 'DOCKER_HUB_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    script {
-                        env.FRONTEND_IMAGE = "${DOCKER_HUB_USER}/sca-frontend"
-                        env.BACKEND_IMAGE = "${DOCKER_HUB_USER}/sca-backend"
-                    }
-                    parallel {
-                        stage('Frontend') {
-                            steps {
+                        script {
+                        def FRONTEND_IMAGE = "${DOCKER_HUB_USER}/sca-frontend"
+                        def BACKEND_IMAGE = "${DOCKER_HUB_USER}/sca-backend"
+
+                        parallel(
+                            'Frontend': {
                                 sh "docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} ./frontend"
-                            }
-                        }
-                        stage('Backend') {
-                            steps {
+                            },
+                            'Backend': {
                                 sh "docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} ./backend"
                             }
-                        }
+                        )
                     }
                 }
             }
