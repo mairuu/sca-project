@@ -34,13 +34,11 @@ GitHub ── webhook ──▶ Jenkins CI/CD
                     Frontend+Backend     ▼
                                     Docker Hub
                                          |
-                           ┌─────────────┤
-                           ▼             ▼
-                       Terraform      Ansible
-                     (K8s resources) (Builder setup)
-                           │             │
-                           └──────┬──────┘
-                                  ▼
+                                         ▼
+                                     Terraform
+                                   (K8s resources)
+                                         |
+                                         ▼
                         Kubernetes Cluster
                    ┌────────────────────────┐
                    │  Frontend   Backend    │
@@ -61,6 +59,8 @@ GitHub ── webhook ──▶ Jenkins CI/CD
       (scrape /metrics)  ─────────────▶    (dashboard)
 ```
 
+> **Ansible** ใช้สำหรับ provision Builder Node (ติดตั้ง Docker, kubectl, Terraform) แบบ manual ก่อน bootstrap
+
 ---
 ## โครงสร้าง Repository
 
@@ -78,20 +78,20 @@ GitHub ── webhook ──▶ Jenkins CI/CD
 │   ├── Dockerfile              # คำสั่งสร้าง Docker image สำหรับ frontend
 │   └── package.json            # Node.js dependencies
 ├── infra/
-│   ├── ansible/                # Ansible playbook สำหรับตั้งค่า Builder Node อัตโนมัติ
-│   │   ├── site.yml            # Main playbook
+│   ├── ansible/                # Ansible playbook สำหรับตั้งค่า Builder Node (รันก่อน bootstrap)
+│   │   ├── site.yml            # Main playbook (configure builder node)
 │   │   ├── ansible.cfg         # Ansible config
-│   │   ├── inventory.ini       # Inventory template (overwritten at runtime)
+│   │   ├── inventory.ini       # Inventory (กำหนด host ของ builder)
 │   │   └── roles/
-│   │       ├── common/         # ติดตั้ง packages พื้นฐาน
-│   │       ├── docker/         # ติดตั้ง Docker Engine
-│   │       ├── kubectl/        # ติดตั้ง kubectl
-│   │       └── terraform/      # ติดตั้ง Terraform
+│   │       ├── common/         # ติดตั้ง packages พื้นฐาน (curl, git, unzip)
+│   │       ├── docker/         # ติดตั้ง Docker Engine + เพิ่ม user group
+│   │       ├── kubectl/        # ติดตั้ง kubectl binary
+│   │       └── terraform/      # ติดตั้ง Terraform binary
 │   ├── app/
-│   │   ├── cd/                 # Jenkinsfile สำหรับ CD pipeline (Deploy)
-│   │   ├── ci/                 # Jenkinsfile สำหรับ CI pipeline (Build & Push)
-│   │   └── terraform/          # กำหนด resource ที่จะ provision สำหรับตัวแอป
-│   └── bootstrap/              # กำหนด Infrastructure ระดับฐานด้วย Terraform
+│   │   ├── cd/                 # Jenkinsfile.cd — CD pipeline (Terraform deploy to K8s)
+│   │   ├── ci/                 # Jenkinsfile.ci — CI pipeline (Build & Push Docker image)
+│   │   └── terraform/          # K8s resources: Deployments, Services, Secrets, ConfigMaps
+│   └── bootstrap/              # Bootstrap infrastructure ด้วย Terraform (Jenkins, DB, Monitoring)
 ├── scripts/
 │   └── configure-dns.sh        # สคริปต์อัตโนมัติสำหรับตั้งค่า DNS
 ├── refs.md                     # แหล่งอ้างอิง
@@ -254,11 +254,23 @@ Building is handled via the Jenkins pipeline:
 
 ### Deploy Application
 
-1. After the build pipeline completes successfully, open the CD pipeline job
+1. After the build pipeline completes successfully, open the CD pipeline job (`pull-and-deploy`)
 2. Click **"Build with Parameters"**
 3. Enter the same image tag used in the build step
 4. Click **Build**
 > you can also trigger the CD pipeline manually after the build completes
+
+The CD pipeline runs the following stages:
+
+| Stage | Description |
+|-------|-------------|
+| Checkout | ดึงโค้ดล่าสุดจาก GitHub |
+| Terraform Init | เตรียม Terraform providers และ backend |
+| Inject Secrets & Plan | ดึง credentials จาก Jenkins → `terraform plan` |
+| Apply | `terraform apply` → สร้าง/อัปเดต K8s resources |
+| Verify Rollout | `kubectl rollout status` ตรวจสอบว่า pods ขึ้นสำเร็จ |
+
+> หาก deployment ล้มเหลว pipeline จะ rollback อัตโนมัติด้วย `kubectl rollout undo`
 
 Domains
 - app.local     # frontend
