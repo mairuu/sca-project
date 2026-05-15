@@ -31,25 +31,25 @@ resource "kubernetes_config_map_v1" "backend_config" {
   }
 
   data = {
-    APP_LOG_LEVEL    = "debug"
-    HTTP_ADDR        = ":8080"
-    DB_LOG_LEVEL     = "info"
+    APP_LOG_LEVEL = "debug"
+    HTTP_ADDR     = ":8080"
+    DB_LOG_LEVEL  = "info"
 
     JWT_ACCESS_TOKEN_TTL  = "24h"
     JWT_REFRESH_TOKEN_TTL = "168h"
 
-    PUBLIC_STORAGE_TYPE        = "minio"
-    PUBLIC_MINIO_ENDPOINT      = "my-minio.app.svc.cluster.local:9000"
-    PUBLIC_MINIO_BUCKET_NAME   = "mp-api-public"
-    PUBLIC_MINIO_USE_SSL       = "false"
+    PUBLIC_STORAGE_TYPE      = "minio"
+    PUBLIC_MINIO_ENDPOINT    = "my-minio.app.svc.cluster.local:9000"
+    PUBLIC_MINIO_BUCKET_NAME = "mp-api-public"
+    PUBLIC_MINIO_USE_SSL     = "false"
 
     TEMPORARY_STORAGE_TYPE      = "minio"
     TEMPORARY_MINIO_ENDPOINT    = "my-minio.app.svc.cluster.local:9000"
     TEMPORARY_MINIO_BUCKET_NAME = "mp-api-temp"
     TEMPORARY_MINIO_USE_SSL     = "false"
 
-    CLEANUP_INTERVAL     = "1h"
-    TEMPORARY_FILE_TTL   = "24h"
+    CLEANUP_INTERVAL   = "1h"
+    TEMPORARY_FILE_TTL = "24h"
   }
 }
 
@@ -66,40 +66,39 @@ resource "kubernetes_config_map_v1" "frontend_config" {
 }
 
 # -------------------------
-# Backend
+# Backend Migrations Job
 # -------------------------
 
-resource "kubernetes_deployment_v1" "backend" {
+resource "kubernetes_job_v1" "backend_migrate" {
   metadata {
-    name      = "backend"
+    name      = "backend-migrate"
     namespace = "app"
   }
 
   spec {
-    replicas = 1
-
-    selector {
-      match_labels = { app = "backend" }
-    }
+    backoff_limit = 1
 
     template {
-      metadata {
-        labels = { app = "backend" }
-      }
+      metadata {}
 
       spec {
-        // todo: turn this into a job
-        init_container {
-          name    = "run-migrations"
-          image   = local.backend_image
+        restart_policy = "Never"
+
+        container {
+          name  = "migrate"
+          image = local.backend_image
+
           command = ["./migrate"]
 
           env_from {
-            config_map_ref { name = kubernetes_config_map_v1.backend_config.metadata[0].name }
+            config_map_ref {
+              name = kubernetes_config_map_v1.backend_config.metadata[0].name
+            }
           }
 
           env {
             name = "SECRET_PG_PASS"
+
             value_from {
               secret_key_ref {
                 name = kubernetes_secret_v1.backend_secrets.metadata[0].name
@@ -113,7 +112,38 @@ resource "kubernetes_deployment_v1" "backend" {
             value = "host=my-postgres-postgresql.app.svc.cluster.local user=${var.postgres_username} password=$(SECRET_PG_PASS) dbname=app_db port=5432 sslmode=disable"
           }
         }
+      }
+    }
+  }
+}
 
+# -------------------------
+# Backend
+# -------------------------
+
+resource "kubernetes_deployment_v1" "backend" {
+  metadata {
+    name      = "backend"
+    namespace = "app"
+  }
+
+  depends_on = [ 
+    kubernetes_job_v1.backend_migrate
+  ]
+
+  spec {
+    replicas = 2
+
+    selector {
+      match_labels = { app = "backend" }
+    }
+
+    template {
+      metadata {
+        labels = { app = "backend" }
+      }
+
+      spec {
         container {
           name  = "backend"
           image = local.backend_image
@@ -121,12 +151,12 @@ resource "kubernetes_deployment_v1" "backend" {
           port { container_port = 8080 }
 
           liveness_probe {
-             http_get {
-               path = "/health"
-               port = 8080
-             }
-             initial_delay_seconds = 10
-             period_seconds = 15
+            http_get {
+              path = "/health"
+              port = 8080
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 15
           }
 
           readiness_probe {
@@ -135,7 +165,7 @@ resource "kubernetes_deployment_v1" "backend" {
               port = 8080
             }
             initial_delay_seconds = 5
-            period_seconds = 5
+            period_seconds        = 5
           }
 
           env_from {
@@ -256,7 +286,7 @@ resource "kubernetes_deployment_v1" "frontend" {
   }
 
   spec {
-    replicas = 1
+    replicas = 2
 
     selector {
       match_labels = { app = "frontend" }
@@ -280,7 +310,7 @@ resource "kubernetes_deployment_v1" "frontend" {
               port = 3000
             }
             initial_delay_seconds = 10
-            period_seconds = 15
+            period_seconds        = 15
           }
 
           readiness_probe {
@@ -289,7 +319,7 @@ resource "kubernetes_deployment_v1" "frontend" {
               port = 3000
             }
             initial_delay_seconds = 5
-            period_seconds = 5
+            period_seconds        = 5
           }
 
           env_from {
